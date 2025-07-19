@@ -155,6 +155,9 @@ def degap():
             current_learned = copy.deepcopy(learned)
             prioritized_elements = sorted(new_elements, key=path_priority_key)
             for i, elem in enumerate(prioritized_elements):
+                # 最後の新規要素は生成しない
+                if i == len(prioritized_elements) - 1:
+                    continue
                 learning_elements = [elem]
                 allowed_elements = list(current_learned)
                 print(f"[DEGAP] 新規学習要素: {elem} のみを追加した中間プログラムを生成 (allowed_elements={allowed_elements})")
@@ -182,7 +185,16 @@ def degap():
                     print(f"=====[Generated code attempt {attempt}]=====")
                     print(code)
                     print("==========================")
-                    ok, info = ai_generator.check_code_elements(code, learning_elements, allowed_elements)
+                    # AI生成コードが空や構文的に不正な場合はcheck_code_elementsを呼ばずにエラー回避
+                    if not code or not code.strip():
+                        print("AI生成コードが空です。check_code_elementsをスキップします。")
+                        ok, info = False, {}
+                    else:
+                        try:
+                            ok, info = ai_generator.check_code_elements(code, learning_elements, allowed_elements)
+                        except Exception as e:
+                            print(f"check_code_elementsで例外発生: {e}\nコード内容: {code}")
+                            ok, info = False, {}
                     forbidden_used = info.get('forbidden', []) if info else []
                     missing = info.get('missing', []) if info else []
                     code_result['ok'] = ok and not forbidden_used
